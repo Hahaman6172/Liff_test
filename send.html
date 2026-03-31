@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sending...</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+      width: 100%;
+      height: 100%;
+    }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: sans-serif;
+      font-size: 14px;
+      color: #999;
+    }
+    #msg {
+      opacity: 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="msg">Sending...</div>
+
+  <script>
+    const LIFF_ID = "2009663113-ZC8oQd6E";
+
+    async function run() {
+      try {
+        await liff.init({ liffId: LIFF_ID });
+
+        const params = new URLSearchParams(window.location.search);
+        const text = params.get("text");
+
+        if (!text) {
+          document.getElementById("msg").style.opacity = "1";
+          document.getElementById("msg").textContent = "缺少 text 參數";
+          return;
+        }
+
+        // 若在外部瀏覽器且尚未登入，先登入再回到此頁
+        if (!liff.isLoggedIn()) {
+          liff.login({ redirectUri: window.location.href });
+          return;
+        }
+
+        // 最適合在 LINE App 內執行
+        if (!liff.isInClient()) {
+          document.getElementById("msg").style.opacity = "1";
+          document.getElementById("msg").textContent = "請在 LINE App 內開啟";
+          return;
+        }
+
+        await liff.sendMessages([
+          {
+            type: "text",
+            text: text
+          }
+        ]);
+
+        liff.closeWindow();
+      } catch (err) {
+        document.getElementById("msg").style.opacity = "1";
+        document.getElementById("msg").textContent =
+          "送出失敗：" + (err.message || String(err));
+      }
+    }
+
+    run();
+  </script>
+</body>
+</html>
