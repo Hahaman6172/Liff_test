@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sending...</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #ffffff;
+      overflow: hidden;
+      font-family: Arial, "Microsoft JhengHei", sans-serif;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #status {
+      font-size: 14px;
+      color: #888;
+      text-align: center;
+      opacity: 0;
+      padding: 20px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+  <div id="status">處理中...</div>
+
+  <script>
+    const LIFF_ID = "2009663113-ZC8oQd6E";
+
+    function showStatus(message) {
+      const el = document.getElementById("status");
+      el.textContent = message;
+      el.style.opacity = "1";
+    }
+
+    function getParam(name) {
+      const params = new URLSearchParams(window.location.search);
+      return params.get(name);
+    }
+
+    function safeTrim(value) {
+      return value ? value.trim() : "";
+    }
+
+    function isValidHttpsUrl(url) {
+      try {
+        const u = new URL(url);
+        return u.protocol === "https:";
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function buildMessagesFromParams() {
+      const messages = [];
+
+      // 文字
+      const text = safeTrim(getParam("text"));
+      if (text) {
+        messages.push({
+          type: "text",
+          text: text
+        });
+      }
+
+      // 圖片
+      const image = safeTrim(getParam("image"));
+      const preview = safeTrim(getParam("preview")) || image;
+
+      if (image) {
+        if (!isValidHttpsUrl(image)) {
+          throw new Error("image 參數必須是 https 圖片網址");
+        }
+        if (!isValidHttpsUrl(preview)) {
+          throw new Error("preview 參數必須是 https 圖片網址");
+        }
+
+        messages.push({
+          type: "image",
+          originalContentUrl: image,
+          previewImageUrl: preview
+        });
+      }
+
+      // 貼圖
+      const packageId = safeTrim(getParam("packageId"));
+      const stickerId = safeTrim(getParam("stickerId"));
+      if (packageId && stickerId) {
+        messages.push({
+          type: "sticker",
+          packageId: packageId,
+          stickerId: stickerId
+        });
+      }
+
+      // Flex（可選）
+      // 用法：?flex=encodeURIComponent(JSON.stringify({...}))
+      const flexRaw = safeTrim(getParam("flex"));
+      const altText = safeTrim(getParam("altText")) || "您收到一則訊息";
+
+      if (flexRaw) {
+        let flexContents;
+        try {
+          flexContents = JSON.parse(flexRaw);
+        } catch (e) {
+          throw new Error("flex 參數不是有效的 JSON");
+        }
+
+        messages.push({
+          type: "flex",
+          altText: altText,
+          contents: flexContents
+        });
+      }
+
+      return messages;
+    }
+
+    async function sendMessagesAndClose() {
+      try {
+        await liff.init({ liffId: LIFF_ID });
+
+        // 沒登入時先登入，再回到同一頁
+        if (!liff.isLoggedIn()) {
+          liff.login({ redirectUri: window.location.href });
+          return;
+        }
+
+        // 最適合在 LINE App 內執行
+        if (!liff.isInClient()) {
+          showStatus("請在 LINE App 內開啟此頁面");
+          return;
+        }
+
+        const messages = buildMessagesFromParams();
+
+        if (!messages.length) {
+          showStatus("沒有可送出的內容\n請帶入 text、image、sticker 或 flex 參數");
+          return;
+        }
+
+        // LINE 一次最多可送 5 則
+        if (messages.length > 5) {
+          showStatus("一次最多只能送出 5 則訊息");
+          return;
+        }
+
+        await liff.sendMessages(messages);
+
+        // 稍微停一下再關閉，避免太快閃掉
+        setTimeout(() => {
+          liff.closeWindow();
+        }, 300);
+
+      } catch (err) {
+        showStatus("送出失敗：\n" + (err && err.message ? err.message : String(err)));
+      }
+    }
+
+    sendMessagesAndClose();
+  </script>
+</body>
+</html>
