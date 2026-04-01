@@ -116,7 +116,7 @@
 						},
 						"body": {
 							"type": "box",
-							"layout": "horizontal",
+							"layout": "vertical",
 							"spacing": "none",
 							"action": {
 								"type": "uri",
@@ -142,8 +142,7 @@
 									"size": "md",
 									"weight": "bold",
 									"margin": "none",
-									"align": "start",
-									"flex": 1,
+									"align": "start",									
 									"contents": [],
 									"style": "normal",
 									"wrap": true,
@@ -366,6 +365,13 @@
 		}
 
 		async function sendShare_RedPacket() {
+			
+			const name = await liff.getProfile().then((profile) => {
+				return profile.displayName;
+			}).catch((err) => {
+				return "朋友";
+			});
+			
 			const redPacketParams = buildParamsFromPreset(REDPACKET_PRESET);
 			const redPacketUrl = buildSendUrl(redPacketParams);
 
@@ -401,7 +407,7 @@
 								},
 								{
 									"type": "text",
-									"text": "您發了 2 個紅包到聊天室。先搶先贏，立即打開紅包！",
+									"text": name + " 發了 2 個紅包到聊天室，立即打開紅包！",
 									"wrap": true,
 									"size": "sm",
 									"color": "#666666"
